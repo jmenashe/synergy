@@ -46,6 +46,9 @@ enum {
 	kMsgSize = 128
 };
 
+double kConnectWaitTime = 0.100; // ms
+double kAcceptWaitTime = 0.100; // ms
+
 static const char kFingerprintDirName[] = "SSL/Fingerprints";
 //static const char kFingerprintLocalFilename[] = "Local.txt";
 static const char kFingerprintTrustedServersFilename[] = "TrustedServers.txt";
@@ -318,6 +321,7 @@ SecureSocket::secureAccept(int socket)
 	if (retry > 0) {
 		LOG((CLOG_DEBUG2 "retry accepting secure socket"));
 		m_secureReady = false;
+		ARCH->sleep(kAcceptWaitTime);
 		return 0;
 	}
 
@@ -351,6 +355,7 @@ SecureSocket::secureConnect(int socket)
 	if (retry > 0) {
 		LOG((CLOG_DEBUG2 "retry connect secure socket"));
 		m_secureReady = false;
+		ARCH->sleep(kConnectWaitTime);
 		return 0;
 	}
 
