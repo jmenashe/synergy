@@ -22,7 +22,7 @@
 
 #include <QtCore/QObject>
 
-typedef int32_t  DNSServiceErrorType;
+typedef int DNSServiceErrorType;
 
 class ZeroconfRegister;
 class ZeroconfBrowser;
