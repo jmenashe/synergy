@@ -970,6 +970,7 @@ void MainWindow::serverDetected(const QString name)
 
 void MainWindow::setEdition(int type)
 {
+	type = Pro;
 	QString title;
 	if (type == Basic) {
 		title = "Synergy Basic";
