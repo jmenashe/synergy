@@ -55,6 +55,9 @@ void Screen::init()
 
 	for (int i = 0; i < NumFixes; i++)
 		fixes() << false;
+
+  for (int i = 0; i < NumCornerPositions; i++)
+    cornerPositions() << 0;
 }
 
 void Screen::loadSettings(QSettings& settings)
@@ -70,6 +73,7 @@ void Screen::loadSettings(QSettings& settings)
 	readSettings(settings, modifiers(), "modifier", static_cast<int>(DefaultMod), NumModifiers);
 	readSettings(settings, switchCorners(), "switchCorner", false, NumSwitchCorners);
 	readSettings(settings, fixes(), "fix", false, NumFixes);
+  readSettings(settings, cornerPositions(), "cornerPositions", 0, 4);
 }
 
 void Screen::saveSettings(QSettings& settings) const
@@ -85,6 +89,7 @@ void Screen::saveSettings(QSettings& settings) const
 	writeSettings(settings, modifiers(), "modifier");
 	writeSettings(settings, switchCorners(), "switchCorner");
 	writeSettings(settings, fixes(), "fix");
+  writeSettings(settings, cornerPositions(), "cornerPositions");
 }
 
 QTextStream& Screen::writeScreensSection(QTextStream& outStream) const
@@ -131,6 +136,7 @@ QDataStream& operator<<(QDataStream& outStream, const Screen& screen)
 		<< screen.modifiers()
 		<< screen.switchCorners()
 		<< screen.fixes()
+    << screen.cornerPositions()
 		;
 }
 
@@ -143,5 +149,6 @@ QDataStream& operator>>(QDataStream& inStream, Screen& screen)
 		>> screen.m_Modifiers
 		>> screen.m_SwitchCorners
 		>> screen.m_Fixes
+    >> screen.m_CornerPositions
 		;
 }

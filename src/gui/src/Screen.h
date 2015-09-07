@@ -57,6 +57,9 @@ class Screen : public BaseConfig
 		int switchCornerSize() const { return m_SwitchCornerSize; }
 		bool fix(Fix f) const { return m_Fixes[f]; }
 		const QList<bool>& fixes() const { return m_Fixes; }
+		QPoint topLeft() const { return QPoint(m_CornerPositions[TopLeftX],m_CornerPositions[TopLeftY]); }
+		QPoint bottomRight() const { return QPoint(m_CornerPositions[BottomRightX],m_CornerPositions[BottomRightY]); }
+    const QList<int>& cornerPositions() const { return m_CornerPositions; }
 
 		void loadSettings(QSettings& settings);
 		void saveSettings(QSettings& settings) const;
@@ -82,6 +85,13 @@ class Screen : public BaseConfig
 		void setFix(int f, bool on) { m_Fixes[f] = on; }
 		QList<bool>& fixes() { return m_Fixes; }
 		void setSwapped(bool on) { m_Swapped = on; }
+    void setCornerPositions(int tlX, int tlY, int brX, int brY) { 
+      m_CornerPositions[0] = tlX;
+      m_CornerPositions[1] = tlY;
+      m_CornerPositions[2] = brX;
+      m_CornerPositions[3] = brY;
+    }
+    QList<int>& cornerPositions() { return m_CornerPositions; }
 
 	private:
 		QPixmap m_Pixmap;
@@ -94,6 +104,7 @@ class Screen : public BaseConfig
 		QList<bool> m_Fixes;
 
 		bool m_Swapped;
+    QList<int> m_CornerPositions;
 };
 
 typedef QList<Screen> ScreenList;

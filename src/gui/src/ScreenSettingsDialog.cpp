@@ -57,6 +57,11 @@ ScreenSettingsDialog::ScreenSettingsDialog(QWidget* parent, Screen* pScreen) :
 	m_pCheckBoxNumLock->setChecked(m_pScreen->fix(Screen::NumLock));
 	m_pCheckBoxScrollLock->setChecked(m_pScreen->fix(Screen::ScrollLock));
 	m_pCheckBoxXTest->setChecked(m_pScreen->fix(Screen::XTest));
+
+  m_pSpinBoxCornerTopLeftX->setValue(m_pScreen->topLeft().x());
+  m_pSpinBoxCornerTopLeftY->setValue(m_pScreen->topLeft().y());
+  m_pSpinBoxCornerBottomRightX->setValue(m_pScreen->bottomRight().x());
+  m_pSpinBoxCornerBottomRightY->setValue(m_pScreen->bottomRight().y());
 }
 
 void ScreenSettingsDialog::accept()
@@ -104,6 +109,11 @@ void ScreenSettingsDialog::accept()
 	m_pScreen->setFix(Screen::NumLock, m_pCheckBoxNumLock->isChecked());
 	m_pScreen->setFix(Screen::ScrollLock, m_pCheckBoxScrollLock->isChecked());
 	m_pScreen->setFix(Screen::XTest, m_pCheckBoxXTest->isChecked());
+
+  m_pScreen->setCornerPositions(
+    m_pSpinBoxCornerTopLeftX->value(), m_pSpinBoxCornerTopLeftY->value(),
+    m_pSpinBoxCornerBottomRightX->value(), m_pSpinBoxCornerBottomRightY->value()
+  );
 
 	QDialog::accept();
 }
