@@ -38,10 +38,12 @@ public:
 	bool				exists(const char* name);
 	virtual void*		invoke(const char* pluginName,
 							const char* functionName,
-							void** args);
+							void** args,
+							void* library = NULL);
 
- private:
+private:
 	String				getPluginsDir();
+	String				getCurrentVersion(const String& name, void* handle);
 
 private:
 	PluginTable			m_pluginTable;

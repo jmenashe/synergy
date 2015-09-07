@@ -2,11 +2,11 @@
  * synergy -- mouse and keyboard sharing utility
  * Copyright (C) 2012 Synergy Si Ltd.
  * Copyright (C) 2008 Volker Lanz (vl@fidra.de)
- * 
+ *
  * This package is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * found in the file LICENSE that should have accompanied this file.
- * 
+ *
  * This package is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -96,7 +96,8 @@ MainWindow::MainWindow(QSettings& settings, AppConfig& appConfig) :
 	m_pCancelButton(NULL),
 	m_SuppressAutoConfigWarning(false),
 	m_BonjourInstall(NULL),
-	m_SuppressEmptyServerWarning(false)
+	m_SuppressEmptyServerWarning(false),
+	m_ExpectedRunningState(kStopped)
 {
 	setupUi(this);
 
@@ -142,6 +143,7 @@ MainWindow::MainWindow(QSettings& settings, AppConfig& appConfig) :
 MainWindow::~MainWindow()
 {
 	if (appConfig().processMode() == Desktop) {
+		m_ExpectedRunningState = kStopped;
 		stopDesktop();
 	}
 
@@ -344,7 +346,7 @@ void MainWindow::logOutput()
 		{
 			if (!line.isEmpty())
 			{
-				appendLogRaw(line);				
+				appendLogRaw(line);
 			}
 		}
 	}
@@ -368,20 +370,20 @@ void MainWindow::updateFound(const QString &version)
 		.arg(version).arg(DOWNLOAD_URL));
 }
 
-void MainWindow::appendLogNote(const QString& text)
+void MainWindow::appendLogInfo(const QString& text)
 {
-	appendLogRaw("NOTE: " + text);
+	appendLogRaw(getTimeStamp() + " INFO: " + text);
 }
 
 void MainWindow::appendLogDebug(const QString& text) {
-	if (appConfig().logLevel() >= 2) {
-		appendLogRaw("DEBUG: " + text);
+	if (appConfig().logLevel() >= 4) {
+		appendLogRaw(getTimeStamp() + " DEBUG: " + text);
 	}
 }
 
 void MainWindow::appendLogError(const QString& text)
 {
-	appendLogRaw("ERROR: " + text);
+	appendLogRaw(getTimeStamp() + " ERROR: " + text);
 }
 
 void MainWindow::appendLogRaw(const QString& text)
@@ -398,7 +400,6 @@ void MainWindow::updateStateFromLogLine(const QString &line)
 {
 	checkConnected(line);
 	checkFingerprint(line);
-	checkTransmission(line);
 }
 
 void MainWindow::checkConnected(const QString& line)
@@ -410,7 +411,7 @@ void MainWindow::checkConnected(const QString& line)
 	{
 		setSynergyState(synergyConnected);
 
-		if (!appConfig().startedBefore()) {
+		if (!appConfig().startedBefore() && isVisible()) {
 				QMessageBox::information(
 					this, "Synergy",
 					tr("Synergy is now connected, You can close the "
@@ -435,60 +436,34 @@ void MainWindow::checkFingerprint(const QString& line)
 		return;
 	}
 
-	QMessageBox::StandardButton fingerprintReply =
-		QMessageBox::information(
-		this, tr("Security question"),
-		tr("Do you trust this fingerprint?\n\n"
-		   "%1\n\n"
-		   "This is a server fingerprint. You should compare this "
-		   "fingerprint to the one on your server's screen. If the "
-		   "two don't match exactly, then it's probably not the server "
-		   "you're expecting (it could be a malicious user).\n\n"
-		   "To automatically trust this fingerprint for future "
-		   "connections, click Yes. To reject this fingerprint and "
-		   "disconnect from the server, click No.")
-		.arg(fingerprint),
-		QMessageBox::Yes | QMessageBox::No);
+	static bool messageBoxAlreadyShown = false;
 
-	if (fingerprintReply == QMessageBox::Yes) {
-		// restart core process after trusting fingerprint.
-		Fingerprint::trustedServers().trust(fingerprint);
-		startSynergy();
-	}
-	else {
-		// on all platforms, the core process will stop if the
-		// fingerprint is not trusted, so technically the stop
-		// isn't really needed. however on windows, the core
-		// process will keep trying (and failing) unless we
-		// tell it to stop.
+	if (!messageBoxAlreadyShown) {
 		stopSynergy();
-	}
-}
 
-void MainWindow::checkTransmission(const QString& line)
-{
-	if (appConfig().logLevel() >= 2) {
-		if (line.contains("Transmission")) {
-			if (line.contains("Started")) {
-				setSynergyState(synergyTransfering);
-			}
-			else if (line.contains("Failed") ||
-					 line.contains("Complete") ||
-					 line.contains("Interrupted")) {
-				setSynergyState(synergyConnected);
-			}
+		messageBoxAlreadyShown = true;
+		QMessageBox::StandardButton fingerprintReply =
+			QMessageBox::information(
+			this, tr("Security question"),
+			tr("Do you trust this fingerprint?\n\n"
+			   "%1\n\n"
+			   "This is a server fingerprint. You should compare this "
+			   "fingerprint to the one on your server's screen. If the "
+			   "two don't match exactly, then it's probably not the server "
+			   "you're expecting (it could be a malicious user).\n\n"
+			   "To automatically trust this fingerprint for future "
+			   "connections, click Yes. To reject this fingerprint and "
+			   "disconnect from the server, click No.")
+			.arg(fingerprint),
+			QMessageBox::Yes | QMessageBox::No);
 
-			// NOTIFY: Title: Detail
-			int p1 = line.indexOf(':');
-			if (p1 > 0) {
-				int p2 = line.indexOf(':', p1 + 1);
-				if (p2 > 0) {
-					QString title = line.mid(p1 + 2, p2 - p1 - 2);
-					QString detail = line.mid(p2 + 2);
-					m_pTrayIcon->showMessage(title, detail);
-				}
-			}
+		if (fingerprintReply == QMessageBox::Yes) {
+			// restart core process after trusting fingerprint.
+			Fingerprint::trustedServers().trust(fingerprint);
+			startSynergy();
 		}
+
+		messageBoxAlreadyShown = false;
 	}
 }
 
@@ -503,6 +478,18 @@ bool MainWindow::autoHide()
 	return false;
 }
 
+QString MainWindow::getTimeStamp()
+{
+	QDateTime current = QDateTime::currentDateTime();
+	return '[' + current.toString(Qt::ISODate) + ']';
+}
+
+void MainWindow::restartSynergy()
+{
+	stopSynergy();
+	startSynergy();
+}
+
 void MainWindow::clearLog()
 {
 	m_pLogOutput->clear();
@@ -513,11 +500,8 @@ void MainWindow::startSynergy()
 	bool desktopMode = appConfig().processMode() == Desktop;
 	bool serviceMode = appConfig().processMode() == Service;
 
-	if (desktopMode)
-	{
-		stopSynergy();
-	}
-
+	appendLogDebug("starting process");
+	m_ExpectedRunningState = kStarted;
 	setSynergyState(synergyConnecting);
 
 	QString app;
@@ -587,27 +571,26 @@ void MainWindow::startSynergy()
 	if (!m_pLogOutput->toPlainText().isEmpty())
 		appendLogRaw("");
 
-	appendLogNote("starting " + QString(synergyType() == synergyServer ? "server" : "client"));
+	appendLogInfo("starting " + QString(synergyType() == synergyServer ? "server" : "client"));
 
 	qDebug() << args;
 
 	// show command if debug log level...
-	if (appConfig().logLevel() >= 2) {
-		appendLogNote(QString("command: %1 %2").arg(app, args.join(" ")));
+	if (appConfig().logLevel() >= 4) {
+		appendLogInfo(QString("command: %1 %2").arg(app, args.join(" ")));
 	}
 
-	appendLogNote("config file: " + configFilename());
-	appendLogNote("log level: " + appConfig().logLevelText());
+	appendLogInfo("config file: " + configFilename());
+	appendLogInfo("log level: " + appConfig().logLevelText());
 
 	if (appConfig().logToFile())
-		appendLogNote("log file: " + appConfig().logFilename());
+		appendLogInfo("log file: " + appConfig().logFilename());
 
 	if (desktopMode)
 	{
 		synergyProcess()->start(app, args);
 		if (!synergyProcess()->waitForStarted())
 		{
-			stopSynergy();
 			show();
 			QMessageBox::warning(this, tr("Program can not be started"), QString(tr("The executable<br><br>%1<br><br>could not be successfully started, although it does exist. Please check if you have sufficient permissions to run this program.").arg(app)));
 			return;
@@ -749,6 +732,10 @@ bool MainWindow::serverArgs(QStringList& args, QString& app)
 
 void MainWindow::stopSynergy()
 {
+	appendLogDebug("stopping process");
+
+	m_ExpectedRunningState = kStopped;
+
 	if (appConfig().processMode() == Service)
 	{
 		stopService();
@@ -777,14 +764,16 @@ void MainWindow::stopService()
 
 void MainWindow::stopDesktop()
 {
+	QMutexLocker locker(&m_StopDesktopMutex);
 	if (!synergyProcess()) {
 		return;
 	}
 
-	appendLogNote("stopping synergy desktop process");
+	appendLogInfo("stopping synergy desktop process");
 
-	if (synergyProcess()->isOpen())
+	if (synergyProcess()->isOpen()) {
 		synergyProcess()->close();
+	}
 
 	delete synergyProcess();
 	setSynergyProcess(NULL);
@@ -792,18 +781,20 @@ void MainWindow::stopDesktop()
 
 void MainWindow::synergyFinished(int exitCode, QProcess::ExitStatus)
 {
-	// on Windows, we always seem to have an exit code != 0.
-#if !defined(Q_OS_WIN)
-	if (exitCode != 0)
-	{
-		QMessageBox::critical(this, tr("Synergy terminated with an error"), QString(tr("Synergy terminated unexpectedly with an exit code of %1.<br><br>Please see the log output for details.")).arg(exitCode));
-		stopSynergy();
+	if (exitCode == 0) {
+		appendLogInfo(QString("process exited normally"));
 	}
-#else
-	Q_UNUSED(exitCode);
-#endif
+	else {
+		appendLogError(QString("process exited with error code: %1").arg(exitCode));
+	}
 
-	setSynergyState(synergyDisconnected);
+	if (m_ExpectedRunningState == kStarted) {
+		QTimer::singleShot(1000, this, SLOT(startSynergy()));
+		appendLogInfo(QString("detected process not running, auto restarting"));
+	}
+	else {
+		setSynergyState(synergyDisconnected);
+	}
 }
 
 void MainWindow::setSynergyState(qSynergyState state)
@@ -949,7 +940,7 @@ void MainWindow::changeEvent(QEvent* event)
 
 void MainWindow::updateZeroconfService()
 {
-	QMutexLocker locker(&m_Mutex);
+	QMutexLocker locker(&m_UpdateZeroconfMutex);
 
 	if (isBonjourRunning()) {
 		if (!m_AppConfig.wizardShouldRun()) {
@@ -1088,7 +1079,7 @@ void MainWindow::autoAddScreen(const QString name)
 			}
 		}
 		else {
-			startSynergy();
+			restartSynergy();
 		}
 	}
 }
@@ -1113,7 +1104,7 @@ void MainWindow::on_m_pActionWizard_triggered()
 
 void MainWindow::on_m_pButtonApply_clicked()
 {
-	startSynergy();
+	restartSynergy();
 }
 
 #if defined(Q_OS_WIN)
@@ -1122,7 +1113,7 @@ bool MainWindow::isServiceRunning(QString name)
 	SC_HANDLE hSCManager;
 	hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
 	if (hSCManager == NULL) {
-		appendLogNote("failed to open a service controller manager, error: " +
+		appendLogError("failed to open a service controller manager, error: " +
 			GetLastError());
 		return false;
 	}
@@ -1175,11 +1166,11 @@ void MainWindow::downloadBonjour()
 	int arch = getProcessorArch();
 	if (arch == kProcessorArchWin32) {
 		url.setUrl(bonjourBaseUrl + bonjourFilename32);
-		appendLogNote("downloading 32-bit Bonjour");
+		appendLogInfo("downloading 32-bit Bonjour");
 	}
 	else if (arch == kProcessorArchWin64) {
 		url.setUrl(bonjourBaseUrl + bonjourFilename64);
-		appendLogNote("downloading 64-bit Bonjour");
+		appendLogInfo("downloading 64-bit Bonjour");
 	}
 	else {
 		QMessageBox::critical(
@@ -1297,7 +1288,7 @@ void MainWindow::updateEdition()
 void MainWindow::on_m_pComboServerList_currentIndexChanged(QString )
 {
 	if (m_pComboServerList->count() != 0) {
-		startSynergy();
+		restartSynergy();
 	}
 }
 
@@ -1332,7 +1323,7 @@ void MainWindow::on_m_pCheckBoxAutoConfig_toggled(bool checked)
 
 void MainWindow::bonjourInstallFinished()
 {
-	appendLogNote("Bonjour install finished");
+	appendLogInfo("Bonjour install finished");
 
 	m_pCheckBoxAutoConfig->setChecked(true);
 }
@@ -1350,13 +1341,4 @@ QString MainWindow::getProfileRootForArg()
 #endif
 
 	return QString("\"%1\"").arg(dir);
-}
-
-void MainWindow::delay(unsigned int s)
-{
-	QTime dieTime= QTime::currentTime().addSecs(s);
-
-	while( QTime::currentTime() < dieTime ) {
-		QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-	}
 }

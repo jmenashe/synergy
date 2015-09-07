@@ -25,6 +25,7 @@
 #include "net/IListenSocket.h"
 #include "net/ISocketFactory.h"
 #include "net/XSocket.h"
+#include "common/PluginVersion.h"
 #include "base/Log.h"
 #include "base/IEventQueue.h"
 #include "base/TMethodEventJob.h"
@@ -32,12 +33,6 @@
 //
 // ClientListener
 //
-
-#if defined _WIN32
-static const char s_networkSecurity[] = { "ns" };
-#else
-static const char s_networkSecurity[] = { "libns" };
-#endif
 
 ClientListener::ClientListener(const NetworkAddress& address,
 				ISocketFactory* socketFactory,
@@ -53,9 +48,9 @@ ClientListener::ClientListener(const NetworkAddress& address,
 	try {
 		// create listen socket
 		if (enableCrypto) {
-			m_useSecureNetwork = ARCH->plugin().exists(s_networkSecurity);
+			m_useSecureNetwork = ARCH->plugin().exists(s_pluginNames[kSecureSocket]);
 			if (m_useSecureNetwork == false) {
-				LOG((CLOG_WARN "crypto disabled because of ns plugin not available"));
+				LOG((CLOG_NOTE "crypto disabled because of ns plugin not available"));
 			}
 		}
 
@@ -147,12 +142,12 @@ ClientListener::handleClientConnecting(const Event&, void*)
 		return;
 	}
 
-	LOG((CLOG_INFO "accepted client connection"));
+	LOG((CLOG_NOTE "accepted client connection"));
 
 	if (m_useSecureNetwork) {
 		LOG((CLOG_DEBUG2 "attempting sercure Connection"));
-		while(!socket->isReady()) {
-			if(socket->isFatal()) {
+		while (!socket->isReady()) {
+			if (socket->isFatal()) {
 				m_listen->deleteSocket(socket);
 				return;
 			}
@@ -253,7 +248,7 @@ ClientListener::cleanupListenSocket()
 	}
 	else {
 		ARCH->plugin().invoke(
-			s_networkSecurity,
+			s_pluginNames[kSecureSocket],
 			"deleteListenSocket",
 			NULL);
 	}

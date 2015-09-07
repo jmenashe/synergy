@@ -2,11 +2,11 @@
  * synergy -- mouse and keyboard sharing utility
  * Copyright (C) 2012 Synergy Si Ltd.
  * Copyright (C) 2008 Volker Lanz (vl@fidra.de)
- * 
+ *
  * This package is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * found in the file LICENSE that should have accompanied this file.
- * 
+ *
  * This package is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -85,6 +85,11 @@ class MainWindow : public QMainWindow, public Ui::MainWindowBase
 			Info
 		};
 
+		enum qRuningState {
+			kStarted,
+			kStopped
+		};
+
 	public:
 		MainWindow(QSettings& settings, AppConfig& appConfig);
 		~MainWindow();
@@ -109,11 +114,10 @@ class MainWindow : public QMainWindow, public Ui::MainWindowBase
 		void serverDetected(const QString name);
 		void setEdition(int type);
 		void updateLocalFingerprint();
-		void delay(unsigned int);
 
 	public slots:
 		void appendLogRaw(const QString& text);
-		void appendLogNote(const QString& text);
+		void appendLogInfo(const QString& text);
 		void appendLogDebug(const QString& text);
 		void appendLogError(const QString& text);
 		void startSynergy();
@@ -138,7 +142,7 @@ class MainWindow : public QMainWindow, public Ui::MainWindowBase
 	protected:
 		QSettings& settings() { return m_Settings; }
 		AppConfig& appConfig() { return m_AppConfig; }
-		QProcess*& synergyProcess() { return m_pSynergy; }
+		QProcess* synergyProcess() { return m_pSynergy; }
 		void setSynergyProcess(QProcess* p) { m_pSynergy = p; }
 		void initConnections();
 		void createMenuBar();
@@ -172,8 +176,9 @@ class MainWindow : public QMainWindow, public Ui::MainWindowBase
 		QString getProfileRootForArg();
 		void checkConnected(const QString& line);
 		void checkFingerprint(const QString& line);
-		void checkTransmission(const QString& line);
 		bool autoHide();
+		QString getTimeStamp();
+		void restartSynergy();
 
 	private:
 		QSettings& m_Settings;
@@ -196,10 +201,12 @@ class MainWindow : public QMainWindow, public Ui::MainWindowBase
 		DataDownloader* m_pDataDownloader;
 		QMessageBox* m_DownloadMessageBox;
 		QAbstractButton* m_pCancelButton;
-		QMutex m_Mutex;
+		QMutex m_UpdateZeroconfMutex;
 		bool m_SuppressAutoConfigWarning;
 		CommandProcess* m_BonjourInstall;
 		bool m_SuppressEmptyServerWarning;
+		qRuningState m_ExpectedRunningState;
+		QMutex m_StopDesktopMutex;
 
 private slots:
 	void on_m_pCheckBoxAutoConfig_toggled(bool checked);

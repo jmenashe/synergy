@@ -36,11 +36,9 @@
 
 #define MAX_ERROR_SIZE 65535
 
-enum {
-	// this limit seems extremely high, but mac client seem to generate around
-	// 50,000 errors before they establish a connection (wtf?)
-	kMaxRetryCount = 100000
-};
+// maxmium retry time limit set to 10s
+static const int s_maxRetry = 1000;
+static const float s_retryDelay = 0.01f;
 
 enum {
 	kMsgSize = 128
@@ -61,8 +59,7 @@ SecureSocket::SecureSocket(
 		SocketMultiplexer* socketMultiplexer) :
 	TCPSocket(events, socketMultiplexer),
 	m_secureReady(false),
-	m_fatal(false),
-	m_maxRetry(kMaxRetryCount)
+	m_fatal(false)
 {
 }
 
@@ -72,8 +69,7 @@ SecureSocket::SecureSocket(
 		ArchSocket socket) :
 	TCPSocket(events, socketMultiplexer, socket),
 	m_secureReady(false),
-	m_fatal(false),
-	m_maxRetry(kMaxRetryCount)
+	m_fatal(false)
 {
 }
 
@@ -318,6 +314,7 @@ SecureSocket::secureAccept(int socket)
 	if (retry > 0) {
 		LOG((CLOG_DEBUG2 "retry accepting secure socket"));
 		m_secureReady = false;
+		ARCH->sleep(s_retryDelay);
 		return 0;
 	}
 
@@ -351,6 +348,7 @@ SecureSocket::secureConnect(int socket)
 	if (retry > 0) {
 		LOG((CLOG_DEBUG2 "retry connect secure socket"));
 		m_secureReady = false;
+		ARCH->sleep(s_retryDelay);
 		return 0;
 	}
 
@@ -475,8 +473,8 @@ SecureSocket::checkResult(int status, int& retry)
 	}
 
 	// If the retry max would exceed the allowed, treat it as a fatal error
-	if (retry > maxRetry()) {
-		LOG((CLOG_ERR "passive ssl error limit exceeded: %d", retry));
+	if (retry > s_maxRetry) {
+		LOG((CLOG_DEBUG "retry exceeded %f sec", s_maxRetry * s_retryDelay));
 		isFatal(true);
 	}
 
@@ -562,7 +560,7 @@ SecureSocket::verifyCertFingerprint()
 	// format fingerprint into hexdecimal format with colon separator
 	String fingerprint(reinterpret_cast<char*>(tempFingerprint), tempFingerprintLen);
 	formatFingerprint(fingerprint);
-	LOG((CLOG_INFO "server fingerprint: %s", fingerprint.c_str()));
+	LOG((CLOG_NOTE "server fingerprint: %s", fingerprint.c_str()));
 
 	String trustedServersFilename;
 	trustedServersFilename = synergy::string::sprintf(
