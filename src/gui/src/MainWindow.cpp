@@ -117,6 +117,7 @@ MainWindow::MainWindow(QSettings& settings, AppConfig& appConfig) :
 	connect(&m_IpcClient, SIGNAL(infoMessage(const QString&)), this, SLOT(appendLogNote(const QString&)));
 	m_IpcClient.connectToHost();
 #endif
+  connect(m_pButtonClearLog, SIGNAL(clicked()), this, SLOT(on_m_pButtonClearLog_clicked()));
 
 	// change default size based on os
 #if defined(Q_OS_MAC)
@@ -1106,6 +1107,11 @@ void MainWindow::on_m_pActionWizard_triggered()
 void MainWindow::on_m_pButtonApply_clicked()
 {
 	restartSynergy();
+}
+
+void MainWindow::on_m_pButtonClearLog_clicked()
+{
+  m_pLogOutput->clear();
 }
 
 #if defined(Q_OS_WIN)

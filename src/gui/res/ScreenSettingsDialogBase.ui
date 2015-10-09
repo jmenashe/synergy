@@ -480,6 +480,9 @@
        <layout class="QGridLayout" name="gridLayout_6">
         <item row="2" column="2">
          <widget class="QSpinBox" name="m_pSpinBoxCornerBottomRightY">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="maximumSize">
            <size>
             <width>46</width>
@@ -512,6 +515,9 @@
         </item>
         <item row="1" column="1">
          <widget class="QSpinBox" name="m_pSpinBoxCornerTopLeftX">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="maximumSize">
            <size>
             <width>46</width>
@@ -544,6 +550,9 @@
         </item>
         <item row="2" column="1">
          <widget class="QSpinBox" name="m_pSpinBoxCornerBottomRightX">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="maximumSize">
            <size>
             <width>46</width>
@@ -573,6 +582,9 @@
         </item>
         <item row="1" column="2">
          <widget class="QSpinBox" name="m_pSpinBoxCornerTopLeftY">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="maximumSize">
            <size>
             <width>46</width>
@@ -616,6 +628,19 @@
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="m_pCheckBoxDefaultCornerPositions">
+          <property name="text">
+           <string>Default</string>
+          </property>
+          <property name="shortcut">
+           <string>Ctrl+S</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -720,7 +745,6 @@
   <tabstop>m_pCheckBoxNumLock</tabstop>
   <tabstop>m_pCheckBoxScrollLock</tabstop>
   <tabstop>m_pCheckBoxXTest</tabstop>
-  <tabstop>spinBox_8</tabstop>
   <tabstop>m_pSpinBoxCornerTopLeftX</tabstop>
   <tabstop>m_pSpinBoxCornerTopLeftY</tabstop>
   <tabstop>m_pSpinBoxCornerBottomRightX</tabstop>
@@ -731,9 +755,6 @@
   <tabstop>m_pCheckBoxCornerBottomLeft</tabstop>
   <tabstop>m_pCheckBoxCornerBottomRight</tabstop>
   <tabstop>m_pButtonBox</tabstop>
-  <tabstop>spinBox_6</tabstop>
-  <tabstop>spinBox_7</tabstop>
-  <tabstop>spinBox_5</tabstop>
  </tabstops>
  <resources/>
  <connections>

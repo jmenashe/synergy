@@ -44,6 +44,7 @@ class ScreenSettingsDialog : public QDialog, public Ui::ScreenSettingsDialogBase
 		void on_m_pButtonRemoveAlias_clicked();
 		void on_m_pLineEditAlias_textChanged(const QString& text);
 		void on_m_pListAliases_itemSelectionChanged();
+    void on_m_pCheckBoxDefaultCornerPositions_toggled(bool checked);
 
 	private:
 		Screen* m_pScreen;

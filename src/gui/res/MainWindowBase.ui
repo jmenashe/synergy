@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>MainWindowBase</class>
  <widget class="QMainWindow" name="MainWindowBase">
@@ -363,6 +363,13 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="m_pButtonClearLog">
+        <property name="text">
+         <string>Clear Log</string>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="m_pButtonApply">

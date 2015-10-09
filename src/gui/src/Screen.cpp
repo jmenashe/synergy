@@ -68,6 +68,7 @@ void Screen::loadSettings(QSettings& settings)
 		return;
 
 	setSwitchCornerSize(settings.value("switchCornerSize").toInt());
+	m_DefaultCornerPositions = settings.value("defaultCornerPositions", true).toBool();
 
 	readSettings(settings, aliases(), "alias", QString(""));
 	readSettings(settings, modifiers(), "modifier", static_cast<int>(DefaultMod), NumModifiers);
@@ -84,6 +85,7 @@ void Screen::saveSettings(QSettings& settings) const
 		return;
 
 	settings.setValue("switchCornerSize", switchCornerSize());
+  settings.setValue("defaultCornerPositions", m_DefaultCornerPositions);
 
 	writeSettings(settings, aliases(), "alias");
 	writeSettings(settings, modifiers(), "modifier");
@@ -108,6 +110,16 @@ QTextStream& Screen::writeScreensSection(QTextStream& outStream) const
 		if (switchCorners()[i])
 			outStream << "+" << switchCornerName(i) << " ";
 	outStream << endl;
+
+  if(!m_DefaultCornerPositions) {
+    outStream << "\t\t" << "cornerPositions = ";
+    for (int i = 0; i < cornerPositions().size(); i++) {
+      outStream << cornerPositions()[i];
+      if (i < cornerPositions().size() - 1)
+        outStream << ",";
+    }
+    outStream << "\n";
+  }
 
 	outStream << "\t\t" << "switchCornerSize = " << switchCornerSize() << endl;
 
@@ -136,6 +148,7 @@ QDataStream& operator<<(QDataStream& outStream, const Screen& screen)
 		<< screen.modifiers()
 		<< screen.switchCorners()
 		<< screen.fixes()
+    << screen.defaultCornerPositions()
     << screen.cornerPositions()
 		;
 }
@@ -150,5 +163,6 @@ QDataStream& operator>>(QDataStream& inStream, Screen& screen)
 		>> screen.m_SwitchCorners
 		>> screen.m_Fixes
     >> screen.m_CornerPositions
+    >> screen.m_DefaultCornerPositions
 		;
 }

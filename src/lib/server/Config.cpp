@@ -919,7 +919,9 @@ Config::readSectionScreens(ConfigReadContext& s)
 			else if (name == "preserveFocus") {
 				addOption(screen, kOptionScreenPreserveFocus,
 					s.parseBoolean(value));
-			}
+			} else if (name == "cornerPositions") {
+        //TODO: fill in
+      }
 			else {
 				// unknown argument
 				throw XConfigRead(s, "unknown argument \"%{1}\"", name);

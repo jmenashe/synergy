@@ -92,6 +92,8 @@ class Screen : public BaseConfig
       m_CornerPositions[3] = brY;
     }
     QList<int>& cornerPositions() { return m_CornerPositions; }
+    bool defaultCornerPositions() const { return m_DefaultCornerPositions; }
+    void setDefaultCornerPositions(bool value) { m_DefaultCornerPositions = value; }
 
 	private:
 		QPixmap m_Pixmap;
@@ -105,6 +107,7 @@ class Screen : public BaseConfig
 
 		bool m_Swapped;
     QList<int> m_CornerPositions;
+    bool m_DefaultCornerPositions;
 };
 
 typedef QList<Screen> ScreenList;

@@ -47,6 +47,7 @@ ScreenSettingsDialog::ScreenSettingsDialog(QWidget* parent, Screen* pScreen) :
 	m_pComboBoxMeta->setCurrentIndex(m_pScreen->modifier(Screen::Meta));
 	m_pComboBoxSuper->setCurrentIndex(m_pScreen->modifier(Screen::Super));
 
+  m_pCheckBoxDefaultCornerPositions->setChecked(m_pScreen->defaultCornerPositions());
 	m_pCheckBoxCornerTopLeft->setChecked(m_pScreen->switchCorner(Screen::TopLeft));
 	m_pCheckBoxCornerTopRight->setChecked(m_pScreen->switchCorner(Screen::TopRight));
 	m_pCheckBoxCornerBottomLeft->setChecked(m_pScreen->switchCorner(Screen::BottomLeft));
@@ -62,6 +63,8 @@ ScreenSettingsDialog::ScreenSettingsDialog(QWidget* parent, Screen* pScreen) :
   m_pSpinBoxCornerTopLeftY->setValue(m_pScreen->topLeft().y());
   m_pSpinBoxCornerBottomRightX->setValue(m_pScreen->bottomRight().x());
   m_pSpinBoxCornerBottomRightY->setValue(m_pScreen->bottomRight().y());
+
+  connect(m_pCheckBoxDefaultCornerPositions, SIGNAL(toggled(bool)), this, SLOT(on_m_pCheckBoxDefaultCornerPositions_toggled(bool)));
 }
 
 void ScreenSettingsDialog::accept()
@@ -99,6 +102,7 @@ void ScreenSettingsDialog::accept()
 	m_pScreen->setModifier(Screen::Meta, m_pComboBoxMeta->currentIndex());
 	m_pScreen->setModifier(Screen::Super, m_pComboBoxSuper->currentIndex());
 
+  m_pScreen->setDefaultCornerPositions(m_pCheckBoxDefaultCornerPositions->isChecked());
 	m_pScreen->setSwitchCorner(Screen::TopLeft, m_pCheckBoxCornerTopLeft->isChecked());
 	m_pScreen->setSwitchCorner(Screen::TopRight, m_pCheckBoxCornerTopRight->isChecked());
 	m_pScreen->setSwitchCorner(Screen::BottomLeft, m_pCheckBoxCornerBottomLeft->isChecked());
@@ -143,5 +147,13 @@ void ScreenSettingsDialog::on_m_pButtonRemoveAlias_clicked()
 void ScreenSettingsDialog::on_m_pListAliases_itemSelectionChanged()
 {
 	m_pButtonRemoveAlias->setEnabled(!m_pListAliases->selectedItems().isEmpty());
+}
+
+void ScreenSettingsDialog::on_m_pCheckBoxDefaultCornerPositions_toggled(bool checked) 
+{
+  m_pSpinBoxCornerTopLeftX->setEnabled(!checked);
+  m_pSpinBoxCornerTopLeftY->setEnabled(!checked);
+  m_pSpinBoxCornerBottomRightX->setEnabled(!checked);
+  m_pSpinBoxCornerBottomRightY->setEnabled(!checked);
 }
 
