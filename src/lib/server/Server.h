@@ -483,4 +483,5 @@ private:
 	ClientListener*		m_clientListener;
 
 	Thread*				m_sendClipboardThread;
+  bool          m_justSwitched;
 };

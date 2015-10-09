@@ -50,6 +50,15 @@
 #include <sstream>
 #include <fstream>
 
+#define CLIENT_LEFT_X 0
+#define CLIENT_RIGHT_X 1920
+#define SCREEN_WIDTH 1920
+#define LEFT_EDGE 1920
+#define CENTER_PRIMARY_SCREEN_HEIGHT 1080
+
+#define DIRECTION_NAME(d) \
+  ( d == kLeft ? "Left" : d == kRight ? "Right" : d == kTop ? "Top" : d == kBottom ? "Bottom" : "NoDirection")
+
 //
 // Server
 //
@@ -93,7 +102,8 @@ Server::Server(
 	m_enableDragDrop(enableDragDrop),
 	m_sendDragInfoThread(NULL),
 	m_waitDragInfoThread(true),
-	m_sendClipboardThread(NULL)
+	m_sendClipboardThread(NULL),
+  m_justSwitched(false)
 {
 	// must have a primary client and it must have a canonical name
 	assert(m_primaryClient != NULL);
@@ -502,6 +512,7 @@ Server::switchScreen(BaseClientProxy* dst,
 		++m_seqNum;
 
 		// enter new screen
+		LOG((CLOG_INFO "HACK, entering new screen at x: %d, y: %d", x, y));
 		m_active->enter(x, y, m_seqNum,
 								m_primaryClient->getToggleMask(),
 								forScreensaver);
@@ -523,6 +534,7 @@ Server::switchScreen(BaseClientProxy* dst,
 		Server::SwitchToScreenInfo* info =
 			Server::SwitchToScreenInfo::alloc(m_active->getName());
 		m_events->addEvent(Event(m_events->forServer().screenSwitched(), this, info));
+    m_justSwitched = true;
 	}
 	else {
 		m_active->mouseMove(x, y);
@@ -617,6 +629,7 @@ Server::getNeighbor(BaseClientProxy* src,
 	float tTmp;
 	for (;;) {
 		String dstName(m_config->getNeighbor(srcName, dir, t, &tTmp));
+		LOG((CLOG_INFO "HACK, found destination \"%s\" direction %s from source \"%s\"", dstName.c_str(), DIRECTION_NAME(dir), srcName.c_str()));
 
 		// if nothing in that direction then return NULL. if the
 		// destination is the source then we can make no more
@@ -629,6 +642,14 @@ Server::getNeighbor(BaseClientProxy* src,
 
 		// look up neighbor cell.  if the screen is connected and
 		// ready then we can stop.
+		if(dstName.substr(0,5) == "PH34R") {
+			dstName = "PH34R";
+			LOG((CLOG_INFO "HACK, re-routed destination \"%s\" from source \"%s\"", dstName.c_str(), srcName.c_str()));
+		}
+		if(dstName.substr(0,5) == "jake-") {
+			dstName = "jake-robocop";
+			LOG((CLOG_INFO "HACK, re-routed destination \"%s\" from source \"%s\"", dstName.c_str(), srcName.c_str()));
+		}
 		ClientList::const_iterator index = m_clients.find(dstName);
 		if (index != m_clients.end()) {
 			LOG((CLOG_DEBUG2 "\"%s\" is on %s of \"%s\" at %f", dstName.c_str(), Config::dirName(dir), srcName.c_str(), t));
@@ -1724,6 +1745,11 @@ Server::onMouseMovePrimary(SInt32 x, SInt32 y)
 		// stale event -- we're actually on a secondary screen
 		return false;
 	}
+  
+  if(m_justSwitched) {
+    m_justSwitched = false;
+  	LOG((CLOG_INFO "HACK, just switched to primary"));
+  }
 
 	// save last delta
 	m_xDelta2 = m_xDelta;
@@ -1736,6 +1762,8 @@ Server::onMouseMovePrimary(SInt32 x, SInt32 y)
 	// save position
 	m_x       = x;
 	m_y       = y;
+		
+  //LOG((CLOG_INFO "HACK, mouse move P: mx: %d, my: %d, dx: %d, dy: %d", m_x, m_y, m_xDelta, m_yDelta));
 
 	// get screen shape
 	SInt32 ax, ay, aw, ah;
@@ -1775,6 +1803,18 @@ Server::onMouseMovePrimary(SInt32 x, SInt32 y)
 		y  += zoneSize;
 		dir = kBottom;
 	}
+	// If we're near the right side of the main screen, go left to the laptop
+	else if (x < SCREEN_WIDTH + zoneSize && x > SCREEN_WIDTH - 100) {
+		LOG((CLOG_INFO "HACK, going to laptop left from main right"));
+		x -= zoneSize;
+		dir = kLeft;
+	}
+	 // If we're near the left side of the main screen, go right to the laptop
+	else if (x >= -LEFT_EDGE + SCREEN_WIDTH - zoneSize && x < 0 + 100) {
+		LOG((CLOG_INFO "HACK, going to laptop right from main left"));
+		x += zoneSize;
+		dir = kRight;
+	}
 	else {
 		// still on local screen
 		noSwitch(x, y);
@@ -1801,6 +1841,15 @@ Server::onMouseMovePrimary(SInt32 x, SInt32 y)
 		}
 
 		// switch screen
+		if(dir == kLeft) {
+			x = SCREEN_WIDTH + m_xDelta; // We're moving left, so go to the right side of the client screen
+			y = m_y + m_yDelta; // Not sure why this gets remapped
+			LOG((CLOG_INFO "HACK, force switch from center right to right, m_x: %d, m_y: %d, x: %d, y: %d", m_x, m_y, x, y));
+		} else if (dir == kRight) {
+			x = 0 + m_xDelta; // Moving right, so go to the left side of the client screen
+			y = m_y + m_yDelta; // Not sure why this gets remapped
+			LOG((CLOG_INFO "HACK, force switch from center left to left, m_x: %d, m_y: %d, x: %d, y: %d", m_x, m_y, x, y));
+		}
 		switchScreen(newScreen, x, y, false);
 		m_waitDragInfoThread = true;
 		return true;
@@ -1870,6 +1919,12 @@ void
 Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 {
 	LOG((CLOG_DEBUG2 "onMouseMoveSecondary %+d,%+d", dx, dy));
+  //LOG((CLOG_INFO "HACK, onMouseMoveSecondary %+d,%+d", dx, dy));
+  if(m_justSwitched) {
+    dx = dy = 0;
+    m_justSwitched = false;
+  	LOG((CLOG_INFO "HACK, just switched to secondary so setting dx, dy to 0, mx: %d, my: %d", m_x, m_y));
+  }
 
 	// mouse move on secondary (client's) screen
 	assert(m_active != NULL);
@@ -1886,6 +1941,7 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 	// have no idea where it really is.
 	if (m_relativeMoves && isLockedToScreenServer()) {
 		LOG((CLOG_DEBUG2 "relative move on %s by %d,%d", getName(m_active).c_str(), dx, dy));
+		LOG((CLOG_INFO "HACK, relative move on secondary: %d, y: %d", dx, dy));
 		m_active->mouseRelativeMove(dx, dy);
 		return;
 	}
@@ -1893,6 +1949,7 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 	// save old position
 	const SInt32 xOld = m_x;
 	const SInt32 yOld = m_y;
+  SInt32 premap_x, premap_y;
 
 	// save last delta
 	m_xDelta2 = m_xDelta;
@@ -1912,6 +1969,7 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 
 	// find direction of neighbor and get the neighbor
 	bool jump = true;
+	EDirection dir;
 	BaseClientProxy* newScreen;
 	do {
 		// clamp position to screen
@@ -1929,7 +1987,9 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 			yc = ay + ah - 1;
 		}
 
-		EDirection dir;
+		LOG((CLOG_INFO "HACK, doing checks to see if we should wait: m_x: %d, ax: %d, aw: %d, m_y: %d, ay: %d, ah: %d",
+      m_x, ax, aw, m_y, ay, ah
+    ));
 		if (m_x < ax) {
 			dir = kLeft;
 		}
@@ -1946,6 +2006,7 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 			// we haven't left the screen
 			newScreen = m_active;
 			jump      = false;
+      LOG((CLOG_INFO "HACK, made it into the wait area, switch screen: %0x", m_switchScreen));
 
 			// if waiting and mouse is not on the border we're waiting
 			// on then stop waiting.  also if it's not on the border
@@ -1953,6 +2014,7 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 			if (m_switchScreen != NULL) {
 				bool clearWait;
 				SInt32 zoneSize = m_primaryClient->getJumpZoneSize();
+        LOG((CLOG_INFO "HACK, switch dir: %s", DIRECTION_NAME(m_switchDir)));
 				switch (m_switchDir) {
 				case kLeft:
 					clearWait = (m_x >= ax + zoneSize);
@@ -1974,6 +2036,7 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 					clearWait = false;
 					break;
 				}
+        LOG((CLOG_INFO "HACK, clear wait: %i", clearWait));
 				if (clearWait) {
 					// still on local screen
 					noSwitch(m_x, m_y);
@@ -1985,14 +2048,49 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 		}
 
 		// try to switch screen.  get the neighbor.
+    premap_x = m_x;
+    premap_y = m_y;
 		newScreen = mapToNeighbor(m_active, dir, m_x, m_y);
+	  LOG((CLOG_INFO "HACK, moving in secondary, mapped to neighbor, dir: %s, x: %d -> %d, y: %d -> %d",
+      DIRECTION_NAME(dir), premap_x, m_x, premap_y, m_y
+    ));
 
 		// see if we should switch
-		if (!isSwitchOkay(newScreen, dir, m_x, m_y, xc, yc)) {
+		if (isSwitchOkay(newScreen, dir, m_x, m_y, xc, yc)) {
+	    LOG((CLOG_INFO "HACK, switch is ok! dir: %s, m_x: %d, m_y: %d, xc: %d, yc: %d",
+        DIRECTION_NAME(dir), m_x, m_y, xc, yc
+      ));
+		} else {
+	    LOG((CLOG_INFO "HACK, SWITC NOT OK! dir: %s, m_x: %d, m_y: %d, xc: %d, yc: %d",
+        DIRECTION_NAME(dir), m_x, m_y, xc, yc
+      ));
 			newScreen = m_active;
 			jump      = false;
-		}
+    }
 	} while (false);
+	
+	if(jump) {
+		if(dir == kLeft) {
+			m_x = 0 + dx; // We're moving left, so go to the left side of the center screen
+      m_y = premap_y; // Don't adjust y because the right monitor is 1280 and so the mapping messes up
+			LOG((CLOG_INFO "HACK, moving left on secondary, go left of center on primary: %d, %d", m_x, m_y));
+		} else if (dir == kRight) {
+			m_x = SCREEN_WIDTH +dx; // Moving right, so go to the right of the center screen
+      m_y = premap_y; // Don't adjust y because the right monitor is 1280 and so the mapping messes up
+			LOG((CLOG_INFO "HACK, moving right on secondary, go right of center on primary: %d, %d", m_x, m_y));
+		} else if (dir == kTop) {
+			KeyModifierMask mods = this->m_primaryClient->getToggleMask();
+			if((mods & (KeyModifierShift | KeyModifierControl)) == (KeyModifierShift | KeyModifierControl)) {
+				m_x = SCREEN_WIDTH / 2; // Whatever just go to the center
+        m_y = CENTER_PRIMARY_SCREEN_HEIGHT;
+				LOG((CLOG_INFO "HACK, mod activated and moving top, go to center primary: %d, %d", m_x, m_y));
+			} else {
+				// Bail out if we aren't doing some modifiers
+				jump = false;
+				LOG((CLOG_INFO "HACK, bail out of jump because direction is top and no mods"));
+			}
+		}
+	}
 
 	if (jump) {
 		if (m_sendFileThread != NULL) {
@@ -2028,6 +2126,7 @@ Server::onMouseMoveSecondary(SInt32 dx, SInt32 dy)
 		if (m_x != xOld || m_y != yOld) {
 			LOG((CLOG_DEBUG2 "move on %s to %d,%d", getName(m_active).c_str(), m_x, m_y));
 			m_active->mouseMove(m_x, m_y);
+			LOG((CLOG_INFO "HACK, absolute move on secondary: %d, y: %d", m_x, m_y));
 		}
 	}
 }
